@@ -1,1 +1,3 @@
-# analogue-clock
+gbraad's Analogue Clock for Obsidian
+====================================
+

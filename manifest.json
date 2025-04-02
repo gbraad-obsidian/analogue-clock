@@ -1,0 +1,10 @@
+{
+	"id": "analogue-clock",
+	"name": "gbraad's Analogue Clock",
+	"version": "0.0.2",
+	"minAppVersion": "0.12.0",
+	"description": "Gerard Braad's analogue clock for use within Obsidian",
+	"author": "Gerard Braad",
+	"authorUrl": "https://www.github.com/gbraad-obsidian",
+	"isDesktopOnly": false
+}
