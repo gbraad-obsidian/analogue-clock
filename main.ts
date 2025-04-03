@@ -1,6 +1,22 @@
 import { App, Plugin, WorkspaceLeaf, ItemView } from 'obsidian';
 
+interface Angles {
+	hourHand: number;
+	minuteHand: number;
+	secondHand: number;
+}
+
+const currentAngles: Angles = {
+	hourHand: 0,
+	minuteHand: 0,
+	secondHand: 0
+};
+
+type AngleKey = keyof Angles;
+
 class AnalogueClockView extends ItemView {
+	private clockInterval: number | null = null;
+
 	constructor(leaf: WorkspaceLeaf) {
 		super(leaf);
 	}
@@ -13,6 +29,24 @@ class AnalogueClockView extends ItemView {
 		return 'Analogue Clock';
 	}
 
+
+	initClockDisplay() {
+		// First update without animation
+		document.querySelectorAll('.hand').forEach(el => (el as HTMLElement).style.transition = "none");
+		this.updateClock(true);  // Pass `true` to reinitialize angles
+		setTimeout(() => {
+			document.querySelectorAll('.hand').forEach(el => (el as HTMLElement).style.transition = "");
+		}, 50);
+	}
+	
+	// Called when the view is closed
+	async onClose(): Promise<void> {
+		if (this.clockInterval !== null) {
+			window.clearInterval(this.clockInterval);
+			this.clockInterval = null;
+		}
+	}
+	
 	async onOpen() {
 		const container = this.containerEl.children[1];
 		container.empty();
@@ -82,68 +116,51 @@ class AnalogueClockView extends ItemView {
 		`;
 		container.appendChild(div);
 
-		interface Angles {
-			hourHand: number;
-			minuteHand: number;
-			secondHand: number;
-		}
-
-		const currentAngles: Angles = {
-			hourHand: 0,
-			minuteHand: 0,
-			secondHand: 0
-		};
-
-		type AngleKey = keyof Angles;
-
-		function updateClock() {
-			const now = new Date();
-			const hours = now.getHours();
-			const minutes = now.getMinutes();
-			const seconds = now.getSeconds();
-			
-			// Calculate target angles
-			const targetHourAngle = (hours % 12) * 30 + minutes * 0.5;
-			const targetMinAngle = minutes * 6;
-			const targetSecAngle = seconds * 6;
-			
-			// Update each hand with continuous rotation
-			updateHand('hourHand', targetHourAngle);
-			updateHand('minuteHand', targetMinAngle);
-			updateHand('secondHand', targetSecAngle);
-		}
-
-		function updateHand(id: AngleKey, targetAngle: number) {
-			const hand = document.getElementById(id);
-			if (!hand) return;
-			
-			// Calculate the shortest path to the new angle
-			let currentAngle = currentAngles[id];
-			let angleDiff = targetAngle - (currentAngle % 360);
-			
-			// Adjust for crossing the 0/360 boundary
-			if (angleDiff > 180) angleDiff -= 360;
-			if (angleDiff < -180) angleDiff += 360;
-			
-			// Calculate the new absolute angle (keeps increasing)
-			const newAngle = currentAngle + angleDiff;
-			currentAngles[id] = newAngle;
-			
-			// Apply the rotation
-			hand.setAttribute("transform", `rotate(${newAngle})`);
-		}
-
-		// First update without animation
-		document.querySelectorAll('.hand').forEach(el => (el as HTMLElement).style.transition = "none");
-		updateClock();
-		setTimeout(() => {
-			document.querySelectorAll('.hand').forEach(el => (el as HTMLElement).style.transition = "");
-			setInterval(updateClock, 1000);
-		}, 50);
+		this.initClockDisplay(); // Initialize the clock display setup
+		this.clockInterval = window.setInterval(this.updateClock.bind(this), 1000);
 	}
 
-	async onClose() {
-		// Nothing to clean up.
+	updateHand(id: AngleKey, targetAngle: number) {
+		const hand = document.getElementById(id);
+		if (!hand) return;
+		
+		// Calculate the shortest path to the new angle
+		let currentAngle = currentAngles[id];
+		let angleDiff = targetAngle - (currentAngle % 360);
+		
+		// Adjust for crossing the 0/360 boundary
+		if (angleDiff > 180) angleDiff -= 360;
+		if (angleDiff < -180) angleDiff += 360;
+		
+		// Calculate the new absolute angle (keeps increasing)
+		const newAngle = currentAngle + angleDiff;
+		currentAngles[id] = newAngle;
+		
+		// Apply the rotation
+		hand.setAttribute("transform", `rotate(${newAngle})`);
+	}
+
+	updateClock(reinitialize = false) {
+		const now = new Date();
+		const hours = now.getHours();
+		const minutes = now.getMinutes();
+		const seconds = now.getSeconds();
+		
+		// Calculate target angles
+		const targetHourAngle = (hours % 12) * 30 + minutes * 0.5;
+		const targetMinAngle = minutes * 6;
+		const targetSecAngle = seconds * 6;
+	
+		if (reinitialize) {
+			currentAngles.hourHand = targetHourAngle;
+			currentAngles.minuteHand = targetMinAngle;
+			currentAngles.secondHand = targetSecAngle;
+		}
+		
+		// Update each hand with continuous rotation
+		this.updateHand('hourHand', targetHourAngle);
+		this.updateHand('minuteHand', targetMinAngle);
+		this.updateHand('secondHand', targetSecAngle);
 	}
 }
 
